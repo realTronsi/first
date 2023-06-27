@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <script>
+    var nickname = null;
+    while (nickname === null || nickname === "") {
+      nickname = window.prompt("Enter nickname: ", "");
+    }
+    var clientName = nickname;
+    var authenticated = false;
+    var ws = new WebSocket("wss://85jly-4041.sse.codesandbox.io");
+
+    ws.onopen = function(e) {
+      console.log("Connected to server");
+      if (authenticated === false) {
+        ws.send("/authenticateUser " + nickname);
+        authenticated = true;
+      }
+    };
+
+    ws.onmessage = function(e) {
+      var data = JSON.parse(e.data);
+      nickname = data.nickname;
+      appendLog(data.type, data.nickname, data.message);
+    };
+
+    ws.onclose = function(e) {
+      ws.close();
+    };
+
+    function appendLog(type, name, message) {
+      let readable = true;
+      if (type === "personal" && clientName !== name) {
+        readable = false;
+      }
+      if (readable === true) {
+        var messages = document.getElementById("msgs");
+        var messageElem = document.createElement("li");
+        var message_container = document.getElementById("message_container");
+        let scrollMsg = true;
+        if (
+          message_container.scrollTop !==
+          message_container.scrollHeight - message_container.clientHeight
+        ) {
+          scrollMsg = false;
+        }
+        var preface_label;
+        if (type === "notification") {
+          preface_label = "<strong>[SERVER]</strong>";
+        } else if (type === "personal") {
+          preface_label = "<strong>[SERVER]</strong>";
+        } else {
+          preface_label = "<strong>" + name + "</strong>";
+        }
+        var message_text = `${preface_label}:&nbsp;&nbsp;${message}`;
+        messageElem.innerHTML = message_text;
+        messages.appendChild(messageElem);
+        if (scrollMsg === true) {
+          message_container.scrollTop = message_container.scrollHeight;
+        }
+      }
+    }
+
+    function sendMessage() {
+      var messageField = document.getElementById("message");
+      if (ws.readyState === WebSocket.OPEN && messageField.value !== "") {
+        ws.send(messageField.value);
+      }
+      messageField.value = "";
+      messageField.focus();
+    }
+  </script>
+
+  <head>
+    <meta charset="utf-8" />
+
+    <title>ws server</title>
+    <meta name="description" content="ws server" />
+    <meta name="author" content="tronsi" />
+  </head>
+
+  <body>
+    <style>
+      #msgs li {
+        list-style-type: none;
+        margin-top: 0;
+      }
+      #msgs {
+        height: 0px;
+        padding-top: 1%;
+        padding-left: 1%;
+        margin-top: 0;
+      }
+      #message_container {
+        height: 70vh;
+        font-size: 20px;
+        white-space: pre-wrap;
+        max-height: 70vh;
+        width: 100%;
+        padding: 0px;
+        overflow: auto;
+        background-color: #eeeeee;
+      }
+      input {
+        word-break: break-word;
+        font-size: 20px;
+        height: 5vh;
+        width: 100%;
+        padding: 0px;
+      }
+    </style>
+    <div id="message_container"><ul id="msgs"></ul></div>
+    <br />
+    <form
+      role="form"
+      id="chat_room"
+      autocomplete="off"
+      onsubmit="sendMessage(); return false;"
+    >
+      <input
+        class="form-control"
+        type="text"
+        id="message"
+        name="message"
+        placeholder="Message here"
+        maxlength="1000"
+        value=""
+        autofocus
+      />
+    </form>
+  </body>
+</html>
